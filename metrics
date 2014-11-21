@@ -1,0 +1,19 @@
+#!/bin/bash
+NOTES='# gnuplot:
+# emacs: M-x load-library gnuplot; gnuplot-mode
+set timefmt "%Y-%m-%d"
+#set xrange ["2013-08-01":"2014-08-31"] noreverse
+set xrange ["2013-12-10":"2014-08-31"] noreverse
+set xdata time
+set format x "%Y\n%m"
+plot "~/svn/yast-network/metrics.dat" using 1:2 with lines
+#
+'
+
+for i in `seq 364 -1 0`; do
+    DATE=`date -I --date="$i days ago"`
+    REV=`git rev-list -n1 --until $DATE master`
+    git checkout $REV
+    Y=$(cat $(find -name \*.rb) | wc -l)
+    echo "$DATE $Y" >> metrics.dat
+done

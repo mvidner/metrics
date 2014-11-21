@@ -1,0 +1,4 @@
+#!/bin/sh
+# loc
+# Lines of Code, in *.rb files
+cat $(find -name \*.rb) | wc -l
