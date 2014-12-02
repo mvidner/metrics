@@ -4,6 +4,7 @@ require "fileutils"
 
 # Usage fill_db REPO_DIR URL METRIC_NAME DATE_FROM DATE_TO
 repo_dir, url, metric_name, date_from, date_to = ARGV
+prefer_old_values = ENV["OLD"]
 
 # ./fill_db.rb ~/svn/yast-bootloader/ git@github.com:yast/yast-bootloader.git loc-1 2014-01-31 `date -I`
 
@@ -54,10 +55,24 @@ end
 
 repo_id = repo_id_by_url(url)
 
-if metric_name == "loc-1"
-  metric_id = 1
-else
-  fail "Not implemented"
+def find_metric_by_name(name)
+  $db.execute("SELECT * FROM metric_names WHERE name = ?;", name).first
+end
+
+def metric_id_by_name(name)
+  row = find_metric_by_name(name)
+  row ? row.first : nil
+end
+
+metric_id = metric_id_by_name(metric_name)
+if metric_id.nil?
+  fail "Cannot find metric '#{metric_name}' in DB"
+end
+
+def find_metric_value(date, repo_id, metric_name_id)
+  sql = "SELECT * FROM metric_values " \
+        "WHERE date = ? AND repo_id = ? AND metric_name_id = ?;"
+  $db.execute(sql, [date.to_s, repo_id, metric_name_id]).first
 end
 
 def dates_between(from, to, &block)
@@ -70,7 +85,7 @@ def dates_between(from, to, &block)
 end
 
 def metric(program, date)
-  `git checkout --quiet $(git rev-list -n1 --until #{date} master); #{program}`.chomp
+  `git checkout --quiet $(git rev-list -n1 --until #{date} master); #{program}`.chomp.to_f
 end
 
 dates_between(date_from, date_to) do |date|
@@ -79,9 +94,23 @@ dates_between(date_from, date_to) do |date|
     value = metric(metric_program, date)
   end
 
-  sql = "INSERT INTO metric_values (date, repo_id, metric_name_id, value) VALUES (?, ?, ?, ?);"
-  #$db.execute(sql, [date.to_s, repo_id, metric_id, value])
   puts "#{date}: #{value}"
+
+  found = find_metric_value(date, repo_id, metric_id)
+  if found
+    old_value = found.last
+    if old_value != value
+      message = "Metric value already present: #{found.inspect}"
+      if prefer_old_values
+        puts message
+      else
+        raise message
+      end
+    end
+  else
+    sql = "INSERT INTO metric_values (date, repo_id, metric_name_id, value) VALUES (?, ?, ?, ?);"
+    $db.execute(sql, [date.to_s, repo_id, metric_id, value])
+  end
 end
 
 system "cd #{repo_dir}; git checkout --quiet master"
