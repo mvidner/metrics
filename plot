@@ -2,6 +2,16 @@
 require "open3"
 require "sqlite3"
 
+def send_data(io, repo_id, metric_name_id)
+  db = SQLite3::Database.new "metrics.sqlite"
+  sql = "SELECT date, value FROM metric_values " \
+    "WHERE repo_id = ? AND metric_name_id = ?"
+  db.execute(sql, [repo_id, metric_name_id]) do |date, value|
+    io.puts "#{date} #{value}"
+  end
+  io.puts "e"
+end
+
 Open3.pipeline_rw("gnuplot") do |g_stdin, g_stdout, g_wait_thrs|
   g_stdin.print <<'GNUPLOT'
 set terminal png
@@ -16,15 +26,13 @@ set format x "%Y\n%m"
 set xdata time
 set timefmt x "%Y-%m-%d"
 set xrange ["2013-11-22":"2014-11-21"]
-
-plot "-" using 1:2 with lines title "yast-network"
 GNUPLOT
 
-  db = SQLite3::Database.new "metrics.sqlite"
-  Q = "SELECT date, value FROM metric_values WHERE repo_id = ? AND metric_name_id = ?"
-  db.execute(Q, [1, 1]) do |date, value|
-    g_stdin.puts "#{date} #{value}"
-  end
-  g_stdin.puts "e"
+  g_stdin.puts 'plot "-" using 1:2 with points title "loc-1 yast-network"'
+  send_data(g_stdin, 1, 1)
+
+#  g_stdin.puts 'plot "-" using 1:2 with points title "loc-1 yast-bootloader"'
+#  send_data(g_stdin, 2, 1)
+
 #  g_stdin.close
 end
