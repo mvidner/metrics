@@ -1,0 +1,5 @@
+#!/bin/sh
+# requires: zombie-killer-0.3.gem
+find -name \*.rb \
+  | count_method_calls --batch '{Builtins,Ops}.*' \
+  | sed -n 's/ *\([0-9]\+\) \*TOTAL\*/\1/;T;p;q'

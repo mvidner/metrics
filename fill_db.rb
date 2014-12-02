@@ -2,7 +2,7 @@
 require "sqlite3"
 require "fileutils"
 
-# Usage fill_db DB URL METRIC_NAME DATE_FROM DATE_TO
+# Usage fill_db REPO_DIR URL METRIC_NAME DATE_FROM DATE_TO
 repo_dir, url, metric_name, date_from, date_to = ARGV
 
 # ./fill_db.rb ~/svn/yast-bootloader/ git@github.com:yast/yast-bootloader.git loc-1 2014-01-31 `date -I`
