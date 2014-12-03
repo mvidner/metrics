@@ -1,4 +1,5 @@
 #!/bin/sh
 # loc
 # Lines of Code, in *.rb files
-cat $(find -name \*.rb) | wc -l
+# The /dev/null avoids reading stdin if no rb files are found
+cat $(find -name \*.rb) /dev/null | wc -l
