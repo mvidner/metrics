@@ -1,0 +1,4 @@
+#!/bin/sh
+# fixmes
+# number of lines of source code containing a FIXME or a similar keyword
+find -name \*.rb | xargs grep -E -i '(FIXME|TODO|HACK)' | wc -l
