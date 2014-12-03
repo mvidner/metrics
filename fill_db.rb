@@ -26,8 +26,9 @@ metric_program = File.expand_path("../bin/#{metric_name}", __FILE__)
 date_from = Date.parse date_from
 date_to   = Date.parse date_to
 
-may_add_repo = true
-
+def may_add_repo
+  true
+end
 
 $db = SQLite3::Database.new "metrics.sqlite"
 
