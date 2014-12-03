@@ -13,3 +13,8 @@ Requirements
 
 - gnuplot
 - sqlite
+
+Screenshots
+-----------
+
+![A Combined Plot](plot.png)
