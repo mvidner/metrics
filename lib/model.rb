@@ -11,8 +11,11 @@ class Metric < ActiveRecord::Base
 end
 
 class Measurement < ActiveRecord::Base
-  validates  :date,       presence: true
   belongs_to :repo,       inverse_of: :measurements
   belongs_to :metric,     inverse_of: :measurements
-  validates  :value,      presence: true, numericality: true
+
+  validates  :date,       presence: true
+  validates  :repo,       presence: true
+  validates  :metric,     presence: true
+  validates  :value,      numericality: true
 end
