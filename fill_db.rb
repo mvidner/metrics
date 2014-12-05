@@ -51,12 +51,12 @@ end
 
 repo = Repo.find_by_url(url)
 if !repo && may_add
-  repo = Repo.create!(url)
+  repo = Repo.create!(url: url)
 end
 
 metric = Metric.find_by_name(metric_name)
 if !metric && may_add
-  metric = Metric.create!(metric_name)
+  metric = Metric.create!(name: metric_name)
 end
 
 dates_between(date_from, date_to) do |date|
