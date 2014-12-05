@@ -1,21 +1,12 @@
 #! /usr/bin/env ruby
 require "open3"
-require "sqlite3"
+require_relative "lib/db"
 
-$db = SQLite3::Database.new "metrics.sqlite"
-
-def send_data(io, repo_id, metric_name_id)
-  sql = "SELECT date, value FROM metric_values " \
-    "WHERE repo_id = ? AND metric_name_id = ? " \
-    "ORDER BY date"
-  $db.execute(sql, [repo_id, metric_name_id]) do |date, value|
-    io.puts "#{date} #{value}"
+def send_data(io, repo_id, metric_id)
+  Measurement.where(repo: repo_id, metric: metric_id).order(:date).each do |m|
+    io.puts "#{m.date.iso8601} #{m.value}"
   end
   io.puts "e"
-end
-
-def find_repo_by_url(url)
-  $db.execute("SELECT * FROM repos WHERE url = ?;", url).first
 end
 
 repos = {
@@ -59,7 +50,7 @@ GNUPLOT
   g_stdin.print "\n"
 
   repos.each do |repo, color|
-    repo_id = find_repo_by_url("git://github.com/yast/yast-#{repo}.git").first
+    repo_id = Repo.find_by_url!("git://github.com/yast/yast-#{repo}.git")
     send_data(g_stdin, repo_id, 2)
     send_data(g_stdin, repo_id, 1)
   end
