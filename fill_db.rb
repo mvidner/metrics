@@ -1,6 +1,6 @@
 #! /usr/bin/env ruby
-require "sqlite3"
 require "fileutils"
+require_relative "lib/db"
 
 # Usage fill_db REPO_DIR URL METRIC_NAME DATE_FROM DATE_TO
 repo_dir, url, metric_name, date_from, date_to = ARGV
@@ -26,54 +26,8 @@ metric_program = File.expand_path("../bin/#{metric_name}", __FILE__)
 date_from = Date.parse date_from
 date_to   = Date.parse date_to
 
-def may_add_repo
+def may_add
   true
-end
-
-$db = SQLite3::Database.new "metrics.sqlite"
-
-def find_repo_by_url(url)
-  p url
-  $db.execute("SELECT * FROM repos WHERE url = ?;", url).first
-end
-
-def add_repo(url)
-  $db.execute("INSERT INTO repos (url) VALUES (?);", url)
-end
-
-def repo_id_by_url(url)
-  row = find_repo_by_url(url)
-  if row.nil?
-    if may_add_repo
-      add_repo(url)
-      row = find_repo_by_url(url)
-    else
-      fail "Cannot find repo URL #{url} in DB"
-    end
-  end
-  row.first
-end
-
-repo_id = repo_id_by_url(url)
-
-def find_metric_by_name(name)
-  $db.execute("SELECT * FROM metric_names WHERE name = ?;", name).first
-end
-
-def metric_id_by_name(name)
-  row = find_metric_by_name(name)
-  row ? row.first : nil
-end
-
-metric_id = metric_id_by_name(metric_name)
-if metric_id.nil?
-  fail "Cannot find metric '#{metric_name}' in DB"
-end
-
-def find_metric_value(date, repo_id, metric_name_id)
-  sql = "SELECT * FROM metric_values " \
-        "WHERE date = ? AND repo_id = ? AND metric_name_id = ?;"
-  $db.execute(sql, [date.to_s, repo_id, metric_name_id]).first
 end
 
 def dates_between(from, to, &block)
@@ -85,32 +39,44 @@ def dates_between(from, to, &block)
   end
 end
 
-def metric(program, date)
-  `git checkout --quiet $(git rev-list -n1 --until #{date} master); #{program}`.chomp.to_f
+def measure(program, date)
+  rev = `git rev-list -n1 --until #{date} master`.chomp
+#  rev = `git rev-list -n1 --first-parent --until #{date} master`.chomp
+  `git checkout --quiet #{rev}; #{program}`.chomp.to_f
+end
+
+repo = Repo.find_by_url(url)
+if !repo && may_add
+  repo = Repo.create!(url)
+end
+
+metric = Metric.find_by_name(metric_name)
+if !metric && may_add
+  metric = Metric.create!(metric_name)
 end
 
 dates_between(date_from, date_to) do |date|
   value = nil
   FileUtils.cd(repo_dir) do
-    value = metric(metric_program, date)
+    value = measure(metric_program, date)
   end
 
   puts "#{date}: #{value}"
 
-  found = find_metric_value(date, repo_id, metric_id)
-  if found
-    old_value = found.last
+  key = { date: date, repo: repo, metric: metric }
+  measurement = Measurement.find_by(key)
+  if !measurement
+    Measurement.create!(key.merge(value: value))
+  else
+    old_value = measurement.value
     if old_value != value
-      message = "Metric value already present: #{found.inspect}"
+      message = "Metric value already present: #{measurement.inspect}"
       if prefer_old_values
         puts message
       else
         raise message
       end
     end
-  else
-    sql = "INSERT INTO metric_values (date, repo_id, metric_name_id, value) VALUES (?, ?, ?, ?);"
-    $db.execute(sql, [date.to_s, repo_id, metric_id, value])
   end
 end
 
