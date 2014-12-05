@@ -2,9 +2,18 @@
 require "fileutils"
 require_relative "lib/db"
 
+if ARGV.first == "-a"
+  may_add = true
+  ARGV.shift
+end
+
+if ARGV.first == "-r"
+  replace = true
+  ARGV.shift
+end
+
 # Usage fill_db REPO_DIR URL METRIC_NAME DATE_FROM DATE_TO
 repo_dir, url, metric_name, date_from, date_to = ARGV
-prefer_old_values = ENV["OLD"]
 
 # ./fill_db.rb ~/svn/yast-bootloader/ git@github.com:yast/yast-bootloader.git loc-1 2014-01-31 `date -I`
 
@@ -26,10 +35,6 @@ metric_program = File.expand_path("../bin/#{metric_name}", __FILE__)
 date_from = Date.parse date_from
 date_to   = Date.parse date_to
 
-def may_add
-  true
-end
-
 def dates_between(from, to, &block)
   raise ArgumentError("starting date is after ending date") if from > to
   loop do
@@ -40,8 +45,7 @@ def dates_between(from, to, &block)
 end
 
 def measure(program, date)
-  rev = `git rev-list -n1 --until #{date} master`.chomp
-#  rev = `git rev-list -n1 --first-parent --until #{date} master`.chomp
+  rev = `git rev-list -n1 --first-parent --until #{date} master`.chomp
   `git checkout --quiet #{rev}; #{program}`.chomp.to_f
 end
 
@@ -70,11 +74,13 @@ dates_between(date_from, date_to) do |date|
   else
     old_value = measurement.value
     if old_value != value
-      message = "Metric value already present: #{measurement.inspect}"
-      if prefer_old_values
-        puts message
+      print " Old value: #{old_value} "
+      if replace
+        puts "Replaced"
+        measurement.value = value
+        measurement.save
       else
-        raise message
+        fail
       end
     end
   end
