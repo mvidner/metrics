@@ -45,7 +45,7 @@ def dates_between(from, to, &block)
 end
 
 def measure(program, date)
-  rev = `git rev-list -n1 --first-parent --until #{date} master`.chomp
+  rev = `git rev-list -n1 --first-parent --until #{date}Z00:00:00 master`.chomp
   `git checkout --quiet #{rev}; #{program}`.chomp.to_f
 end
 
