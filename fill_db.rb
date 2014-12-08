@@ -8,7 +8,7 @@ if ARGV.first == "-a"
 end
 
 if ARGV.first == "-r"
-  replace = true
+  $replace = true
   ARGV.shift
 end
 
@@ -59,10 +59,10 @@ if !metric && may_add
   metric = Metric.create!(name: metric_name)
 end
 
-dates_between(date_from, date_to) do |date|
+def take_measurement(date, repo, metric, repo_dir, program)
   value = nil
   FileUtils.cd(repo_dir) do
-    value = measure(metric_program, date)
+    value = measure(program, date)
   end
 
   puts "#{date}: #{value}"
@@ -75,15 +75,21 @@ dates_between(date_from, date_to) do |date|
     old_value = measurement.value
     if old_value != value
       print " Old value: #{old_value} "
-      if replace
+      if $replace
         puts "Replaced"
         measurement.value = value
         measurement.save
       else
-        fail
+        fail "Values differ"
       end
     end
   end
 end
 
-system "cd #{repo_dir}; git checkout --quiet master"
+begin
+  dates_between(date_from, date_to) do |date|
+    take_measurement(date, repo, metric, repo_dir, metric_program)
+  end
+ensure
+  system "cd #{repo_dir}; git checkout --quiet master"
+end
