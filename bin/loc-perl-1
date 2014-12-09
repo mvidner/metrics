@@ -1,0 +1,5 @@
+#!/bin/sh
+# loc-perl
+# Lines of Code, in Perl files
+# The /dev/null avoids reading stdin if no such files files are found
+cat $(find -name \*.p[lm]) /dev/null | wc -l
