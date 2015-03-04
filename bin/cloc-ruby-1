@@ -1,0 +1,16 @@
+#!/bin/sh
+# cloc-cpp
+# Lines of C++ code using cloc and excluding tests
+
+# Calculating path to cloc.pl (not so straightforward)
+pushd `dirname $0` > /dev/null
+cloc=`pwd`
+cloc=$cloc/../lib/cloc.pl
+popd > /dev/null
+
+# Regexp to filter the language
+lang='Ruby'
+# Excluded directories
+excl=test,testsuite
+
+perl $cloc --csv --exclude-dir=$excl . | grep $lang |cut -d"," -f5
