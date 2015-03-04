@@ -1,0 +1,24 @@
+#!/bin/sh
+# cloc-cpp
+# Lines of C++ code using cloc and excluding tests
+
+# Calculating path to cloc.pl (not so straightforward)
+pushd `dirname $0` > /dev/null
+cloc=`pwd`
+cloc=$cloc/../lib/cloc.pl
+popd > /dev/null
+
+# Regexp to filter the language (C++ and C++ headers)
+lang='C++'
+# Excluded directories
+excl=test,testsuite
+
+lines="$(perl $cloc --csv --exclude-dir=$excl . | grep $lang |cut -d"," -f5)"
+
+# We need to sum up C++ and headers
+count=0
+while read line
+do
+  count=$(($count + $line))
+done <<< "${lines}"
+echo $count
